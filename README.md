@@ -1,5 +1,15 @@
 # 🖼 React Zoom Pan Pinch
 
+## @jboolean fork
+
+This fork adds
+
+- Ability to separate event-receiving part from component to transform. This
+  allows you to have e.g. an overlay inside the zoom container but is not itself
+  zoomed.
+- zoomToPoint method to allow zooming to a specific point on the screen. Used to
+  implement a "click to zoom" feature.
+
 > Super fast and light react npm package for zooming, panning and pinching html
 > elements in easy way
 

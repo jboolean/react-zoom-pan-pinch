@@ -1,7 +1,6 @@
 import React from "react";
 
 import { animations } from "../core/animations/animations.constants";
-import { DeepNonNullable } from "./helpers.model";
 import {
   centerView,
   resetTransform,
@@ -9,8 +8,10 @@ import {
   zoomIn,
   zoomOut,
   zoomToElement,
+  zoomToPoint,
 } from "../core/handlers/handlers.logic";
 import { ZoomPanPinch } from "../core/instance.core";
+import { DeepNonNullable } from "./helpers.model";
 
 export type ReactZoomPanPinchContext = typeof ZoomPanPinch.prototype;
 
@@ -40,6 +41,7 @@ export type ReactZoomPanPinchHandlers = {
   resetTransform: ReturnType<typeof resetTransform>;
   centerView: ReturnType<typeof centerView>;
   zoomToElement: ReturnType<typeof zoomToElement>;
+  zoomToPoint: ReturnType<typeof zoomToPoint>;
 };
 
 export type ReactZoomPanPinchRefProps = {

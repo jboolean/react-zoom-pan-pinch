@@ -74,6 +74,18 @@ export const handlersTable: ComponentProps = {
     description:
       "This function make a transition for certain node provided to the function(as node element or it's id string). It allows only to zoom elements with offsetWidth and offsetHeight properties - since SVG's doesn't have those, it is impossible to perform it on such elements.",
   },
+  zoomToPoint: {
+    type: ["function(x, y, scale, animationTime, animationName)"],
+    parameters: [
+      "x: number",
+      "y: number",
+      "scale: number",
+      "animationTime: number = 300",
+      "animationName: string = easeOut",
+    ],
+    description:
+      "This function make a transition for certain node provided to the function(as node element or it's id string). It allows only to zoom elements with offsetWidth and offsetHeight properties - since SVG's doesn't have those, it is impossible to perform it on such elements.",
+  },
 };
 
 export const getHandlersTable = (): ControlsFnOptionsType[] => {

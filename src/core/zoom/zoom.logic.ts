@@ -10,7 +10,7 @@ export function handleZoomToPoint(
   scale: number,
   mouseX: number,
   mouseY: number,
-): Omit<ReactZoomPanPinchState, "previousScale"> | undefined {
+): Omit<ReactZoomPanPinchState, "previousScale"> {
   const { minScale, maxScale, limitToBounds } = contextInstance.setup;
 
   const newScale = checkZoomBounds(

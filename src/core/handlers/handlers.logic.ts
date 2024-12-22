@@ -1,12 +1,13 @@
+import { handleZoomToPoint } from "core/zoom/zoom.logic";
 import { ReactZoomPanPinchContext } from "../../models";
+import { getCenterPosition } from "../../utils";
+import { animations } from "../animations/animations.constants";
+import { animate, handleCancelAnimation } from "../animations/animations.utils";
 import {
   calculateZoomToNode,
   handleZoomToViewCenter,
   resetTransformations,
 } from "./handlers.utils";
-import { animations } from "../animations/animations.constants";
-import { animate, handleCancelAnimation } from "../animations/animations.utils";
-import { getCenterPosition } from "../../utils";
 
 export const zoomIn =
   (contextInstance: ReactZoomPanPinchContext) =>
@@ -112,4 +113,19 @@ export const zoomToElement =
       const targetState = calculateZoomToNode(contextInstance, target, scale);
       animate(contextInstance, targetState, animationTime, animationType);
     }
+  };
+
+export const zoomToPoint =
+  (contextInstance: ReactZoomPanPinchContext) =>
+  (
+    x: number,
+    y: number,
+    scale: number,
+    animationTime = 600,
+    animationType: keyof typeof animations = "easeOut",
+  ): void => {
+    handleCancelAnimation(contextInstance);
+
+    const targetState = handleZoomToPoint(contextInstance, scale, x, y);
+    animate(contextInstance, targetState, animationTime, animationType);
   };

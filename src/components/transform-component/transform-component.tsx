@@ -1,8 +1,8 @@
 /* eslint-disable react/require-default-props */
 import React, { useContext, useEffect, useRef } from "react";
 
-import { Context } from "../transform-wrapper/transform-wrapper";
 import { baseClasses } from "../../constants/state.constants";
+import { Context } from "../transform-wrapper/transform-wrapper";
 
 import styles from "./transform-component.module.css";
 
@@ -14,16 +14,56 @@ type Props = {
   contentStyle?: React.CSSProperties;
   wrapperProps?: React.HTMLAttributes<HTMLDivElement>;
   contentProps?: React.HTMLAttributes<HTMLDivElement>;
+
+  // Set to true if you want to render InnerTransformedContent yourself inside of childern.
+  // Do this if you want to separate the event target area from the transformed content. Wrap the content to transform in InnerTransformedContent.
+  // Otherwise it will wrap all children.
+  // content* props will be ignored if this is set to true—pass them to the InnerTransformedContent component instead.
+  childrenIncludesContentWrapper?: boolean;
 };
 
-export const TransformComponent: React.FC<Props> = ({
+type InnerTransformedContentProps = React.HTMLAttributes<HTMLDivElement>;
+
+const InnerTransformedContentRefContext =
+  React.createContext<React.RefObject<HTMLDivElement> | null>(null);
+
+/**
+ * This component wraps the content to be transformed
+ * @param param0
+ * @returns
+ */
+export const InnerTransformedContent = ({
+  className,
   children,
+  ...props
+}: InnerTransformedContentProps) => {
+  const contextRef = useContext(InnerTransformedContentRefContext);
+  return (
+    <div
+      {...props}
+      ref={contextRef}
+      className={`${baseClasses.contentClass} ${styles.content} ${className}`}
+    >
+      {children}
+    </div>
+  );
+};
+
+/**
+ * This component provides the event-capturing container.
+ * The children are the content to be transformed. In you don't want all children to be transformed, set `childrenIncludesContentWrapper` to true and wrap childern to transform in InnerTransformedContent.
+ * @param param0
+ * @returns
+ */
+export const TransformComponent: React.FC<Props> = ({
   wrapperClass = "",
-  contentClass = "",
   wrapperStyle,
-  contentStyle,
   wrapperProps = {},
-  contentProps = {},
+  contentClass,
+  contentProps,
+  contentStyle,
+  children,
+  childrenIncludesContentWrapper = false,
 }: Props) => {
   const { init, cleanupWindowEvents } = useContext(Context);
 
@@ -49,14 +89,19 @@ export const TransformComponent: React.FC<Props> = ({
       className={`${baseClasses.wrapperClass} ${styles.wrapper} ${wrapperClass}`}
       style={wrapperStyle}
     >
-      <div
-        {...contentProps}
-        ref={contentRef}
-        className={`${baseClasses.contentClass} ${styles.content} ${contentClass}`}
-        style={contentStyle}
-      >
-        {children}
-      </div>
+      <InnerTransformedContentRefContext.Provider value={contentRef}>
+        {childrenIncludesContentWrapper ? (
+          children
+        ) : (
+          <InnerTransformedContent
+            className={contentClass}
+            style={contentStyle}
+            {...contentProps}
+          >
+            {children}
+          </InnerTransformedContent>
+        )}
+      </InnerTransformedContentRefContext.Provider>
     </div>
   );
 };

@@ -1,31 +1,34 @@
 import {
+  AnimationType,
   BoundsType,
   LibrarySetup,
   PositionType,
-  VelocityType,
-  AnimationType,
   ReactZoomPanPinchProps,
-  ReactZoomPanPinchState,
   ReactZoomPanPinchRef,
+  ReactZoomPanPinchState,
+  VelocityType,
 } from "../models";
 import {
-  getContext,
   createSetup,
   createState,
-  handleCallback,
-  getTransformStyles,
-  makePassiveEventOption,
   getCenterPosition,
+  getContext,
+  getTransformStyles,
+  handleCallback,
+  makePassiveEventOption,
 } from "../utils";
 import { handleCancelAnimation } from "./animations/animations.utils";
-import { isWheelAllowed } from "./wheel/wheel.utils";
-import { isPinchAllowed, isPinchStartAllowed } from "./pinch/pinch.utils";
 import { handleCalculateBounds } from "./bounds/bounds.utils";
 import {
-  handleWheelStart,
-  handleWheelZoom,
-  handleWheelStop,
-} from "./wheel/wheel.logic";
+  handleDoubleClick,
+  isDoubleClickAllowed,
+} from "./double-click/double-click.logic";
+import {
+  handleAlignToBounds,
+  handlePanning,
+  handlePanningEnd,
+  handlePanningStart,
+} from "./pan/panning.logic";
 import {
   getPaddingValue,
   handleNewPosition,
@@ -33,20 +36,17 @@ import {
   isPanningStartAllowed,
 } from "./pan/panning.utils";
 import {
-  handlePanning,
-  handlePanningEnd,
-  handlePanningStart,
-  handleAlignToBounds,
-} from "./pan/panning.logic";
-import {
   handlePinchStart,
   handlePinchStop,
   handlePinchZoom,
 } from "./pinch/pinch.logic";
+import { isPinchAllowed, isPinchStartAllowed } from "./pinch/pinch.utils";
 import {
-  handleDoubleClick,
-  isDoubleClickAllowed,
-} from "./double-click/double-click.logic";
+  handleWheelStart,
+  handleWheelStop,
+  handleWheelZoom,
+} from "./wheel/wheel.logic";
+import { isWheelAllowed } from "./wheel/wheel.utils";
 
 type StartCoordsType = { x: number; y: number } | null;
 
@@ -98,6 +98,7 @@ export class ZoomPanPinch {
   public maxBounds: BoundsType | null = null;
   // key press
   public pressedKeys: { [key: string]: boolean } = {};
+  public activeTouches: Touch[] = [];
 
   constructor(props: ReactZoomPanPinchProps) {
     this.props = props;
@@ -170,6 +171,9 @@ export class ZoomPanPinch {
     wrapper.addEventListener("touchstart", this.onTouchPanningStart, passive);
     wrapper.addEventListener("touchmove", this.onTouchPanning, passive);
     wrapper.addEventListener("touchend", this.onTouchPanningStop, passive);
+    wrapper.addEventListener("touchcancel", (e) => {
+      this.removeActiveTouches(e.changedTouches);
+    });
   };
 
   handleInitialize = (
@@ -181,6 +185,7 @@ export class ZoomPanPinch {
     const { centerOnInit } = this.setup;
 
     const hasTarget = (entries: ResizeObserverEntry[], target: Element) => {
+      // eslint-disable-next-line no-restricted-syntax
       for (const entry of entries) {
         if (entry.target === target) {
           return true;
@@ -344,7 +349,7 @@ export class ZoomPanPinch {
     const isAllowed = isPinchStartAllowed(this, event);
     if (!isAllowed) return;
 
-    handlePinchStart(this, event);
+    handlePinchStart(this);
     handleCancelAnimation(this);
     handleCallback(getContext(this), event, onPinchingStart);
     handleCallback(getContext(this), event, onZoomStart);
@@ -362,7 +367,7 @@ export class ZoomPanPinch {
     event.preventDefault();
     event.stopPropagation();
 
-    handlePinchZoom(this, event);
+    handlePinchZoom(this);
     handleCallback(getContext(this), event, onPinching);
     handleCallback(getContext(this), event, onZoom);
   };
@@ -381,7 +386,26 @@ export class ZoomPanPinch {
   // Touch
   /// ///////
 
+  removeActiveTouches = (touchList: TouchList) => {
+    const touchIds = new Set<number>();
+    for (let i = 0; i < touchList.length; i += 1) {
+      touchIds.add(touchList[i].identifier);
+    }
+    this.activeTouches = this.activeTouches.filter(
+      (touch) => !touchIds.has(touch.identifier),
+    );
+  };
+
+  addActiveTouches = (touchList: TouchList) => {
+    for (let i = 0; i < touchList.length; i += 1) {
+      this.activeTouches.push(touchList[i]);
+    }
+  };
+
   onTouchPanningStart = (event: TouchEvent): void => {
+    // remove any with duplicate id first
+    this.removeActiveTouches(event.changedTouches);
+    this.addActiveTouches(event.changedTouches);
     const { disabled } = this.setup;
     const { onPanningStart } = this.props;
 
@@ -391,14 +415,18 @@ export class ZoomPanPinch {
 
     if (!isAllowed) return;
 
-    const isDoubleTap = this.lastTouch && +new Date() - this.lastTouch < 200;
+    const isDoubleTap =
+      this.lastTouch &&
+      +new Date() - this.lastTouch < 200 &&
+      this.activeTouches.length === 1;
 
     if (!isDoubleTap) {
       this.lastTouch = +new Date();
 
       handleCancelAnimation(this);
 
-      const { touches } = event;
+      // this.activeTouches does not seem to work on Android
+      const touches = this.activeTouches;
 
       const isPanningAction = touches.length === 1;
       const isPinchAction = touches.length === 2;
@@ -415,10 +443,12 @@ export class ZoomPanPinch {
   };
 
   onTouchPanning = (event: TouchEvent): void => {
+    this.removeActiveTouches(event.changedTouches);
+    this.addActiveTouches(event.changedTouches);
     const { disabled } = this.setup;
     const { onPanning } = this.props;
 
-    if (this.isPanning && event.touches.length === 1) {
+    if (this.isPanning && this.activeTouches.length === 1) {
       if (disabled) return;
 
       const isAllowed = isPanningAllowed(this);
@@ -427,15 +457,16 @@ export class ZoomPanPinch {
       event.preventDefault();
       event.stopPropagation();
 
-      const touch = event.touches[0];
+      const touch = this.activeTouches[0];
       handlePanning(this, touch.clientX, touch.clientY);
       handleCallback(getContext(this), event, onPanning);
-    } else if (event.touches.length > 1) {
+    } else if (this.activeTouches.length > 1) {
       this.onPinch(event);
     }
   };
 
   onTouchPanningStop = (event: TouchEvent): void => {
+    this.removeActiveTouches(event.changedTouches);
     this.onPanningStop(event);
     this.onPinchStop(event);
   };

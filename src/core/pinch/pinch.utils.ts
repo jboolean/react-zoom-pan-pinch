@@ -35,12 +35,11 @@ export const isPinchAllowed = (
 };
 
 export const calculateTouchMidPoint = (
-  event: TouchEvent,
+  touches: Touch[],
   scale: number,
   contentComponent: HTMLDivElement,
 ): PositionType => {
   const contentRect = contentComponent.getBoundingClientRect();
-  const { touches } = event;
   const firstPointX = roundNumber(touches[0].clientX - contentRect.left, 5);
   const firstPointY = roundNumber(touches[0].clientY - contentRect.top, 5);
   const secondPointX = roundNumber(touches[1].clientX - contentRect.left, 5);
@@ -52,10 +51,10 @@ export const calculateTouchMidPoint = (
   };
 };
 
-export const getTouchDistance = (event: TouchEvent): number => {
+export const getTouchDistance = (activeTouches: Touch[]): number => {
   return Math.sqrt(
-    (event.touches[0].pageX - event.touches[1].pageX) ** 2 +
-      (event.touches[0].pageY - event.touches[1].pageY) ** 2,
+    (activeTouches[0].pageX - activeTouches[1].pageX) ** 2 +
+      (activeTouches[0].pageY - activeTouches[1].pageY) ** 2,
   );
 };
 

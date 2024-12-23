@@ -11,8 +11,8 @@ import {
   handleTouchPanningSetup,
 } from "./panning.utils";
 import {
-  handleVelocityPanning,
   handleCalculateVelocity,
+  handleVelocityPanning,
 } from "./velocity.logic";
 
 export function handlePanningStart(
@@ -24,7 +24,7 @@ export function handlePanningStart(
   handleCancelAnimation(contextInstance);
   handleCalculateBounds(contextInstance, scale);
   if (window.TouchEvent !== undefined && event instanceof TouchEvent) {
-    handleTouchPanningSetup(contextInstance, event as TouchEvent);
+    handleTouchPanningSetup(contextInstance);
   } else {
     handlePanningSetup(contextInstance, event as MouseEvent);
   }

@@ -1,26 +1,26 @@
 /* eslint-disable no-param-reassign */
 import { ReactZoomPanPinchContext } from "../../models";
 import { handleCancelAnimation } from "../animations/animations.utils";
+import {
+  getMouseBoundedPosition,
+  handleCalculateBounds,
+} from "../bounds/bounds.utils";
+import { getPaddingValue } from "../pan/panning.utils";
 import { handleAlignToScaleBounds } from "../zoom/zoom.logic";
+import { handleCalculateZoomPositions } from "../zoom/zoom.utils";
 import {
   calculatePinchZoom,
   calculateTouchMidPoint,
   getTouchDistance,
 } from "./pinch.utils";
-import {
-  getMouseBoundedPosition,
-  handleCalculateBounds,
-} from "../bounds/bounds.utils";
-import { handleCalculateZoomPositions } from "../zoom/zoom.utils";
-import { getPaddingValue } from "../pan/panning.utils";
 
-const getTouchCenter = (event: TouchEvent) => {
+const getTouchCenter = (activeTouches: Touch[]) => {
   let totalX = 0;
   let totalY = 0;
   // Sum up the positions of all touches
   for (let i = 0; i < 2; i += 1) {
-    totalX += event.touches[i].clientX;
-    totalY += event.touches[i].clientY;
+    totalX += activeTouches[i].clientX;
+    totalY += activeTouches[i].clientY;
   }
 
   // Calculate the average position
@@ -32,16 +32,15 @@ const getTouchCenter = (event: TouchEvent) => {
 
 export const handlePinchStart = (
   contextInstance: ReactZoomPanPinchContext,
-  event: TouchEvent,
 ): void => {
-  const distance = getTouchDistance(event);
+  const distance = getTouchDistance(contextInstance.activeTouches);
 
   contextInstance.pinchStartDistance = distance;
   contextInstance.lastDistance = distance;
   contextInstance.pinchStartScale = contextInstance.transformState.scale;
   contextInstance.isPanning = false;
 
-  const center = getTouchCenter(event);
+  const center = getTouchCenter(contextInstance.activeTouches);
   contextInstance.pinchLastCenterX = center.x;
   contextInstance.pinchLastCenterY = center.y;
 
@@ -50,7 +49,6 @@ export const handlePinchStart = (
 
 export const handlePinchZoom = (
   contextInstance: ReactZoomPanPinchContext,
-  event: TouchEvent,
 ): void => {
   const { contentComponent, pinchStartDistance, wrapperComponent } =
     contextInstance;
@@ -62,15 +60,19 @@ export const handlePinchZoom = (
   // if one finger starts from outside of wrapper
   if (pinchStartDistance === null || !contentComponent) return;
 
-  const midPoint = calculateTouchMidPoint(event, scale, contentComponent);
+  const midPoint = calculateTouchMidPoint(
+    contextInstance.activeTouches,
+    scale,
+    contentComponent,
+  );
 
   // if touches goes off of the wrapper element
   if (!Number.isFinite(midPoint.x) || !Number.isFinite(midPoint.y)) return;
 
-  const currentDistance = getTouchDistance(event);
+  const currentDistance = getTouchDistance(contextInstance.activeTouches);
   const newScale = calculatePinchZoom(contextInstance, currentDistance);
 
-  const center = getTouchCenter(event);
+  const center = getTouchCenter(contextInstance.activeTouches);
   // pan should be scale invariant.
   const panX = center.x - (contextInstance.pinchLastCenterX || 0);
   const panY = center.y - (contextInstance.pinchLastCenterY || 0);

@@ -68,9 +68,8 @@ export const handlePanningSetup = (
 
 export const handleTouchPanningSetup = (
   contextInstance: ReactZoomPanPinchContext,
-  event: TouchEvent,
 ): void => {
-  const { touches } = event;
+  const touches = contextInstance.activeTouches;
   const { positionX, positionY } = contextInstance.transformState;
 
   contextInstance.isPanning = true;

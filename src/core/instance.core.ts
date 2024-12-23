@@ -100,6 +100,9 @@ export class ZoomPanPinch {
   public pressedKeys: { [key: string]: boolean } = {};
   public activeTouches: Touch[] = [];
 
+  // Flagged if browser is capable of returning multiple event.touches
+  private _eventTouchesWorking = false;
+
   constructor(props: ReactZoomPanPinchProps) {
     this.props = props;
     this.setup = createSetup(this.props);
@@ -172,7 +175,7 @@ export class ZoomPanPinch {
     wrapper.addEventListener("touchmove", this.onTouchPanning, passive);
     wrapper.addEventListener("touchend", this.onTouchPanningStop, passive);
     wrapper.addEventListener("touchcancel", (e) => {
-      this.removeActiveTouches(e.changedTouches);
+      this.updateActiveTouches(e.touches, e.changedTouches, "stop");
     });
   };
 
@@ -402,10 +405,42 @@ export class ZoomPanPinch {
     }
   };
 
+  // So… Android seems to have a bug where event.touches has at most one touch and we need to track manually
+  // Meanwhile iOS seems to not report touches ending and the list can build up.
+  // We'll use event.touches if it seems to be working, otherwise we'll track manually
+  updateActiveTouches = (
+    eventTouches: TouchList,
+    changedTouches: TouchList,
+    action: "start" | "stop" | "change",
+  ) => {
+    if (eventTouches.length > 1) {
+      this._eventTouchesWorking = true;
+    }
+
+    if (this._eventTouchesWorking) {
+      const activeTouches = [];
+      for (let i = 0; i < eventTouches.length; i += 1) {
+        activeTouches.push(eventTouches[i]);
+      }
+      this.activeTouches = activeTouches;
+    } else {
+      switch (action) {
+        case "start":
+        case "change":
+          this.removeActiveTouches(changedTouches);
+          this.addActiveTouches(changedTouches);
+          break;
+        case "stop":
+          this.removeActiveTouches(changedTouches);
+          break;
+        default:
+          break;
+      }
+    }
+  };
+
   onTouchPanningStart = (event: TouchEvent): void => {
-    // remove any with duplicate id first
-    this.removeActiveTouches(event.changedTouches);
-    this.addActiveTouches(event.changedTouches);
+    this.updateActiveTouches(event.touches, event.changedTouches, "start");
     const { disabled } = this.setup;
     const { onPanningStart } = this.props;
 
@@ -443,8 +478,7 @@ export class ZoomPanPinch {
   };
 
   onTouchPanning = (event: TouchEvent): void => {
-    this.removeActiveTouches(event.changedTouches);
-    this.addActiveTouches(event.changedTouches);
+    this.updateActiveTouches(event.touches, event.changedTouches, "change");
     const { disabled } = this.setup;
     const { onPanning } = this.props;
 
@@ -466,7 +500,7 @@ export class ZoomPanPinch {
   };
 
   onTouchPanningStop = (event: TouchEvent): void => {
-    this.removeActiveTouches(event.changedTouches);
+    this.updateActiveTouches(event.touches, event.changedTouches, "stop");
     this.onPanningStop(event);
     this.onPinchStop(event);
   };
